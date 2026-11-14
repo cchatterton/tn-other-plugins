@@ -48,8 +48,8 @@ function tnop_render_admin(): void {
     if (!current_user_can('update_plugins') || (is_multisite() && !current_user_can('manage_network_plugins'))) { wp_die('You cannot manage plugin updates.'); }
     $tab = isset($_GET['tab']) && sanitize_key(wp_unslash($_GET['tab'])) === 'catalogue' ? 'catalogue' : 'installed';
     $plugins = tnop_inventory();
-    $updates = array_intersect_key(tnop_update_items(), $plugins);
     $checked = (int) get_site_option('tnop_checked_at', 0);
+    $updates = $checked ? array_intersect_key(tnop_update_items(), $plugins) : [];
     echo '<div class="wrap tnop-wrap"><h1>Other Plugins</h1><div class="tnop-panel">';
     echo '<header class="tnop-header"><span class="tnop-version">v' . esc_html(TNOP_VERSION) . '</span><p class="tnop-eyebrow">Techn / Plugin library</p><h2>Your other plugins. One place.</h2><p>Installed plugins outside the Techn, AlphaSys and current Fusion catalogues.</p><div class="tnop-header-bottom"><span>' . count($plugins) . ' installed · ' . count($updates) . ' updates available</span>';
     echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="tnop_check">';
@@ -78,6 +78,7 @@ function tnop_activation_url(string $file, bool $active): string {
 
 function tnop_render_updates(array $plugins, array $updates): void {
     echo '<div class="tnop-toolbar"><h2>Updates available</h2></div>';
+    if (!(int) get_site_option('tnop_checked_at', 0)) { echo '<p>Click Check for updates to load available updates.</p>'; return; }
     if (!$updates) { echo '<p>No updates available for other plugins in the latest WordPress check.</p>'; return; }
     echo '<form method="post" action="' . esc_url(self_admin_url('update.php?action=update-selected')) . '">';
     wp_nonce_field('bulk-update-plugins');

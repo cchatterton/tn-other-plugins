@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- Prompt for the first manual check before listing available updates.
+
 ## 0.1.2
 
 - Correct the Techn controller API declaration used by the catalogue publisher.

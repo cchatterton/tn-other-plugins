@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Other Plugins
  * Description: Review and update installed plugins outside the Techn, AlphaSys and Fusion catalogues.
- * Version: 0.1.2
+ * Version: 0.1.3
  * Author: Techn
  * Author URI: https://techn.com.au
  * Update URI: https://github.com/cchatterton/tn-other-plugins
@@ -16,7 +16,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('TNOP_VERSION', '0.1.2');
+define('TNOP_VERSION', '0.1.3');
 define('TNOP_FILE', __FILE__);
 require_once __DIR__ . '/includes/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-other-plugins');
