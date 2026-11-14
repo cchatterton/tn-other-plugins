@@ -18,12 +18,15 @@ function tnop_action_links(array $links): array {
 function tnop_enqueue_assets(string $hook): void {
     if ($hook === 'plugins_page_tn-other-plugins') {
         wp_enqueue_style('tnop-admin', plugins_url('assets/admin.css', TNOP_FILE), [], TNOP_VERSION);
+        wp_enqueue_script('tnop-admin', plugins_url('assets/admin.js', TNOP_FILE), [], TNOP_VERSION, true);
+        wp_localize_script('tnop-admin', 'tnopAdmin', [
+            'url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('tnop_check'),
+        ]);
     }
 }
 
-function tnop_check_updates(): void {
-    if (!current_user_can('update_plugins') || (is_multisite() && !current_user_can('manage_network_plugins'))) { wp_die('You cannot check plugin updates.'); }
-    check_admin_referer('tnop_check');
+function tnop_run_check(): int {
     wp_update_plugins(['manual_check' => 'tn-other-plugins']);
     $details = tnop_details();
     require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
@@ -40,8 +43,27 @@ function tnop_check_updates(): void {
     }
     update_site_option('tnop_details', $details);
     update_site_option('tnop_checked_at', time());
+    return count(array_intersect_key(tnop_update_items(), tnop_inventory()));
+}
+
+function tnop_check_updates(): void {
+    if (!current_user_can('update_plugins') || (is_multisite() && !current_user_can('manage_network_plugins'))) { wp_die('You cannot check plugin updates.'); }
+    check_admin_referer('tnop_check');
+    tnop_run_check();
     wp_safe_redirect(tnop_url());
     exit;
+}
+
+function tnop_check_updates_ajax(): void {
+    if (!current_user_can('update_plugins') || (is_multisite() && !current_user_can('manage_network_plugins'))) {
+        wp_send_json_error(['message' => 'You cannot check plugin updates.'], 403);
+    }
+    check_ajax_referer('tnop_check', 'nonce');
+    $count = tnop_run_check();
+    if (defined('TNOP_AJAX_BUFFER_LEVEL')) {
+        while (ob_get_level() >= TNOP_AJAX_BUFFER_LEVEL) { ob_end_clean(); }
+    }
+    wp_send_json_success(['updates' => $count]);
 }
 
 function tnop_render_admin(): void {
@@ -54,7 +76,7 @@ function tnop_render_admin(): void {
     echo '<header class="tnop-header"><span class="tnop-version">v' . esc_html(TNOP_VERSION) . '</span><p class="tnop-eyebrow">Techn / Plugin library</p><h2>Your other plugins. One place.</h2><p>Installed plugins outside the Techn, AlphaSys and current Fusion catalogues.</p><div class="tnop-header-bottom"><span>' . count($plugins) . ' installed · ' . count($updates) . ' updates available</span>';
     echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="tnop_check">';
     wp_nonce_field('tnop_check');
-    echo '<button class="button tnop-primary" type="submit">Check for updates</button></form></div></header>';
+    echo '<button class="button tnop-primary" type="submit" data-tnop-check>Check for updates</button></form></div></header>';
     echo '<div class="tnop-status"><span>' . ($checked ? 'Last checked ' . esc_html(wp_date('j M Y, H:i', $checked)) : 'Never checked') . '</span><span>Manual checks only</span></div>';
     echo '<nav class="nav-tab-wrapper" aria-label="Other Plugins">';
     foreach (['installed' => 'Updates available', 'catalogue' => 'Catalogue'] as $key => $label) {
@@ -63,7 +85,9 @@ function tnop_render_admin(): void {
     echo '</nav><main class="tnop-main">';
     if ($tab === 'catalogue') { tnop_render_catalogue($plugins, $updates); }
     else { tnop_render_updates($plugins, $updates); }
-    echo '</main></div></div>';
+    echo '</main></div>';
+    echo '<dialog id="tnop-dialog" class="tnop-dialog" aria-labelledby="tnop-dialog-title" aria-describedby="tnop-dialog-message"><h2 id="tnop-dialog-title" tabindex="-1">Checking for updates</h2><div class="tnop-activity"><span class="spinner is-active" aria-hidden="true"></span><p id="tnop-dialog-message" role="status" aria-live="polite">Checking WordPress and plugin sources…</p></div><div class="tnop-dialog-actions"><button type="button" class="button button-primary" id="tnop-close" disabled>Close</button></div></dialog>';
+    echo '</div>';
 }
 
 function tnop_update_url(string $file): string {

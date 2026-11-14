@@ -22,4 +22,10 @@
 .tnop-card .button { align-self: flex-start; margin-top: .8rem; }
 .tnop-card .button + .button { margin-top: .5rem; }
 .tnop-wrap a:focus-visible, .tnop-wrap button:focus-visible { outline: .15rem solid #2271b1; outline-offset: .15rem; }
+.tnop-dialog { width: min(30rem, calc(100% - 3rem)); max-height: calc(100vh - 4rem); box-sizing: border-box; overflow: auto; padding: 1.75rem; border: .0625rem solid #c3c4c7; border-radius: .5rem; color: #1d2327; box-shadow: 0 1rem 4rem #0003; }
+.tnop-dialog::backdrop { background: #12294099; }
+.tnop-dialog h2 { margin: 0 0 1rem; font-size: 1.3rem; line-height: 1.4; }
+.tnop-activity { display: flex; align-items: center; gap: .75rem; }
+.tnop-activity .spinner { flex-shrink: 0; float: none; margin: 0; }
+.tnop-dialog-actions { display: flex; justify-content: flex-end; margin-top: 1.5rem; }
 @media (max-width: 40rem) { .tnop-header { padding: 1.3rem; } .tnop-header h2 { font-size: 1.6rem; } }

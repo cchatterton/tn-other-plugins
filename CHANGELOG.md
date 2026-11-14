@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Show manual update checks in a modal and refresh the list after completion.
+
 ## 0.1.3
 
 - Prompt for the first manual check before listing available updates.
