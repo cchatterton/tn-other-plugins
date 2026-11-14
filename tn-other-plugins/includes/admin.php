@@ -90,14 +90,22 @@ function tnop_render_admin(): void {
     echo '</div>';
 }
 
-function tnop_update_url(string $file): string {
-    return wp_nonce_url(add_query_arg(['action' => 'upgrade-plugin', 'plugin' => $file], self_admin_url('update.php')), 'upgrade-plugin_' . $file);
-}
-
 function tnop_activation_url(string $file, bool $active): string {
     $action = $active ? 'deactivate' : 'activate';
     $url = add_query_arg(['action' => $action, 'plugin' => $file, 'networkwide' => is_multisite() ? 1 : 0], self_admin_url('plugins.php'));
     return wp_nonce_url($url, $action . '-plugin_' . $file);
+}
+
+function tnop_release_notes_url(string $file, array $plugin, array $updates): string {
+    $slug = tnop_wporg_slug($file);
+    if ($slug !== '') { return 'https://wordpress.org/plugins/' . rawurlencode($slug) . '/#developers'; }
+    $update_uri = (string) ($plugin['UpdateURI'] ?? '');
+    if (preg_match('~^https://github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9_.-]+/?$~D', $update_uri)) {
+        return rtrim($update_uri, '/') . '/releases';
+    }
+    $update_url = (string) ($updates[$file]->url ?? '');
+    if (preg_match('~^https?://~i', $update_url)) { return $update_url; }
+    return '';
 }
 
 function tnop_render_updates(array $plugins, array $updates): void {
@@ -106,14 +114,11 @@ function tnop_render_updates(array $plugins, array $updates): void {
     echo '<div class="tnop-toolbar"><h2>Updates available</h2><button type="submit" class="button button-primary" id="tnop-update-selected" disabled>Update selected plugins</button></div>';
     if (!(int) get_site_option('tnop_checked_at', 0)) { echo '<p>Click Check for updates to load available updates.</p></form>'; return; }
     if (!$updates) { echo '<p>No updates available for other plugins in the latest WordPress check.</p></form>'; return; }
-    echo '<div class="tnop-table-scroll"><table class="widefat striped"><thead><tr><th scope="col">Select</th><th scope="col">Plugin</th><th scope="col">Installed</th><th scope="col">Available</th><th scope="col">Action</th></tr></thead><tbody>';
+    echo '<div class="tnop-table-scroll"><table class="widefat striped"><thead><tr><td class="check-column"><input type="checkbox" id="tnop-select-all" aria-label="Select all eligible updates"></td><th scope="col">Plugin</th><th scope="col">Installed</th><th scope="col">Available</th></tr></thead><tbody>';
     foreach ($updates as $file => $item) {
         $name = $plugins[$file]['Name'] ?? $file;
         $allowed = current_user_can('update_plugins');
-        echo '<tr><td><input type="checkbox" name="checked[]" value="' . esc_attr($file) . '" aria-label="Select ' . esc_attr($name) . '"' . ($allowed ? '' : ' disabled') . '></td><td><strong>' . esc_html($name) . '</strong></td><td>' . esc_html($plugins[$file]['Version'] ?? '') . '</td><td>' . esc_html($item->new_version ?? '') . '</td><td>';
-        if ($allowed) { echo '<a class="button" href="' . esc_url(tnop_update_url($file)) . '">Update</a>'; }
-        else { echo 'Updates are disabled on this site.'; }
-        echo '</td></tr>';
+        echo '<tr><th class="check-column"><input type="checkbox" name="checked[]" value="' . esc_attr($file) . '" aria-label="Select ' . esc_attr($name) . '"' . ($allowed ? '' : ' disabled') . '></th><td><strong>' . esc_html($name) . '</strong></td><td>' . esc_html($plugins[$file]['Version'] ?? '') . '</td><td>' . esc_html($item->new_version ?? '') . '</td></tr>';
     }
     echo '</tbody></table></div></form>';
 }
@@ -128,18 +133,33 @@ function tnop_render_catalogue(array $plugins, array $updates): void {
         echo '<div class="tnop-grid">';
         foreach ($groups[$group] as $file => $plugin) {
             $info = $details[$file] ?? [];
-            echo '<article class="tnop-card"><h3>' . esc_html($plugin['Name'] ?? $file) . '</h3><p class="tnop-description">' . esc_html(wp_strip_all_tags($plugin['Description'] ?? '')) . '</p>';
-            echo '<p class="tnop-detail">Installed ' . esc_html($plugin['Version'] ?? '') . (isset($updates[$file]) ? ' · Update ' . esc_html($updates[$file]->new_version ?? '') . ' available' : '') . '</p>';
+            $active = $group === 'active';
+            $latest = (string) ($updates[$file]->new_version ?? $plugin['Version'] ?? '');
+            $requirements = [];
+            if (!empty($plugin['RequiresWP'])) { $requirements[] = 'WordPress ' . $plugin['RequiresWP'] . '+'; }
+            if (!empty($plugin['RequiresPHP'])) { $requirements[] = 'PHP ' . $plugin['RequiresPHP'] . '+'; }
+            $version = 'Installed ' . ($plugin['Version'] ?? '') . ' · Latest ' . $latest;
+            if ($requirements) { $version .= ' · ' . implode(' · ', $requirements); }
+            echo '<article class="tnop-card"><div class="tnop-card-content"><h3>' . esc_html($plugin['Name'] ?? $file) . '</h3><p class="tnop-card-description">' . esc_html(wp_strip_all_tags($plugin['Description'] ?? '')) . '</p>';
+            echo '<p class="tnop-detail">' . esc_html($version) . '</p>';
             if ($info) {
                 if ($info['last_updated'] !== '') { echo '<p class="tnop-detail">Last updated ' . esc_html($info['last_updated']) . '</p>'; }
                 echo '<p class="tnop-detail">' . esc_html(number_format_i18n($info['downloaded'])) . ' downloads · ' . esc_html(number_format_i18n($info['num_ratings'])) . ' ratings</p>';
             }
-            if (isset($updates[$file]) && current_user_can('update_plugins')) { echo '<a class="button button-primary" href="' . esc_url(tnop_update_url($file)) . '">Update</a>'; }
-            $active = $group === 'active';
+            echo '<div class="tnop-card-actions">';
             if (current_user_can($active ? 'deactivate_plugin' : 'activate_plugin', $file)) {
                 echo '<a class="button" href="' . esc_url(tnop_activation_url($file, $active)) . '">' . esc_html((is_multisite() ? 'Network ' : '') . ($active ? 'Deactivate' : 'Activate')) . '</a>';
             }
-            echo '</article>';
+            if (!$active && current_user_can('delete_plugins')) {
+                echo '<form method="post" action="' . esc_url(self_admin_url('plugins.php')) . '"><input type="hidden" name="action" value="delete-selected"><input type="hidden" name="checked[]" value="' . esc_attr($file) . '">';
+                wp_nonce_field('bulk-plugins');
+                echo '<button type="submit" class="button-link-delete">Delete</button></form>';
+            }
+            $release_notes = tnop_release_notes_url($file, $plugin, $updates);
+            if ($release_notes !== '') {
+                echo '<a href="' . esc_url($release_notes) . '" target="_blank" rel="noopener noreferrer">Release notes<span class="screen-reader-text"> (opens in a new tab)</span></a>';
+            } else { echo '<span class="description">Release notes unavailable</span>'; }
+            echo '</div></div></article>';
         }
         echo '</div></section>';
     }

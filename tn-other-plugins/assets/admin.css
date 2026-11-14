@@ -13,14 +13,17 @@
 .tnop-table-scroll { overflow-x: auto; }
 .tnop-table-scroll table { min-width: 35rem; }
 .tnop-table-scroll td { padding: .9rem .6rem; vertical-align: middle; }
+.tnop-table-scroll .check-column { padding: .9rem .6rem; }
 .tnop-group { margin-top: 1.75rem; }
 .tnop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 1.2rem; margin: 1rem 0 2rem; }
-.tnop-card { display: flex; flex-direction: column; padding: 1.25rem; border: .0625rem solid #dcdcde; border-top: .2rem solid var(--tnop-orange); border-radius: .35rem; background: #fff; }
+.tnop-card { display: flex; flex-direction: column; overflow: hidden; border: .0625rem solid #dcdcde; border-top: .2rem solid var(--tnop-orange); border-radius: .35rem; background: #fff; }
+.tnop-card-content { display: flex; flex: 1; flex-direction: column; padding: 1.25rem; }
 .tnop-card h3 { margin: 0 0 .5rem; font-size: 1.15rem; line-height: 1.35; }
-.tnop-description { flex: 1; margin: 0 0 1rem; }
+.tnop-card-description { flex: 1; margin: 0 0 1rem; }
 .tnop-detail { margin: 0 0 .5rem; color: #50575e; }
-.tnop-card .button { align-self: flex-start; margin-top: .8rem; }
-.tnop-card .button + .button { margin-top: .5rem; }
+.tnop-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .8rem; margin-top: .8rem; }
+.tnop-card-actions form { margin: 0; }
+.tnop-card-actions .button-link-delete { color: #b32d2e; cursor: pointer; }
 .tnop-wrap a:focus-visible, .tnop-wrap button:focus-visible { outline: .15rem solid #2271b1; outline-offset: .15rem; }
 .tnop-dialog { width: min(30rem, calc(100% - 3rem)); max-height: calc(100vh - 4rem); box-sizing: border-box; overflow: auto; padding: 1.75rem; border: .0625rem solid #c3c4c7; border-radius: .5rem; color: #1d2327; box-shadow: 0 1rem 4rem #0003; }
 .tnop-dialog::backdrop { background: #12294099; }

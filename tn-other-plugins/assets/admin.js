@@ -6,8 +6,21 @@
 
     const updateForm = document.getElementById('tnop-update-form');
     const updateSelected = document.getElementById('tnop-update-selected');
-    updateForm?.addEventListener('change', () => {
-        updateSelected.disabled = !updateForm.querySelector('[name="checked[]"]:checked:not(:disabled)');
+    const selectAll = document.getElementById('tnop-select-all');
+    const selection = () => {
+        const boxes = [...updateForm.querySelectorAll('[name="checked[]"]:not(:disabled)')];
+        const chosen = boxes.filter(box => box.checked);
+        updateSelected.disabled = chosen.length === 0;
+        if (selectAll) {
+            selectAll.checked = boxes.length > 0 && chosen.length === boxes.length;
+            selectAll.indeterminate = chosen.length > 0 && chosen.length < boxes.length;
+        }
+    };
+    updateForm?.addEventListener('change', event => {
+        if (event.target === selectAll) {
+            updateForm.querySelectorAll('[name="checked[]"]:not(:disabled)').forEach(box => { box.checked = selectAll.checked; });
+        }
+        selection();
     });
 
     const title = document.getElementById('tnop-dialog-title');

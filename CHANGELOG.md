@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+- Use one Update selected plugins action with a select-all checkbox, matching the Techn update list.
+- Match catalogue card layout and actions: Deactivate or Activate, Delete for inactive plugins, and release notes where a source is available.
+
 ## 0.1.5
 
 - Place Update selected plugins beside the Updates available heading and enable it when a plugin is selected.
