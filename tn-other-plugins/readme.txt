@@ -2,7 +2,7 @@
 Contributors:
 Tags: plugins, updates, catalogue, techn
 Requires at least: 6.5
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -30,6 +30,10 @@ An explicit check sends the installed plugin list to the WordPress.org update AP
 Terms: https://wordpress.org/about/privacy/
 
 == Changelog ==
+
+= 0.1.5 =
+
+* Place Update selected plugins beside the Updates available heading and enable it when a plugin is selected. Use WordPress's update_plugins capability for update actions.
 
 = 0.1.4 =
 

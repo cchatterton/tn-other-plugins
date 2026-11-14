@@ -101,21 +101,21 @@ function tnop_activation_url(string $file, bool $active): string {
 }
 
 function tnop_render_updates(array $plugins, array $updates): void {
-    echo '<div class="tnop-toolbar"><h2>Updates available</h2></div>';
-    if (!(int) get_site_option('tnop_checked_at', 0)) { echo '<p>Click Check for updates to load available updates.</p>'; return; }
-    if (!$updates) { echo '<p>No updates available for other plugins in the latest WordPress check.</p>'; return; }
-    echo '<form method="post" action="' . esc_url(self_admin_url('update.php?action=update-selected')) . '">';
+    echo '<form id="tnop-update-form" method="post" action="' . esc_url(self_admin_url('update.php?action=update-selected')) . '">';
     wp_nonce_field('bulk-update-plugins');
+    echo '<div class="tnop-toolbar"><h2>Updates available</h2><button type="submit" class="button button-primary" id="tnop-update-selected" disabled>Update selected plugins</button></div>';
+    if (!(int) get_site_option('tnop_checked_at', 0)) { echo '<p>Click Check for updates to load available updates.</p></form>'; return; }
+    if (!$updates) { echo '<p>No updates available for other plugins in the latest WordPress check.</p></form>'; return; }
     echo '<div class="tnop-table-scroll"><table class="widefat striped"><thead><tr><th scope="col">Select</th><th scope="col">Plugin</th><th scope="col">Installed</th><th scope="col">Available</th><th scope="col">Action</th></tr></thead><tbody>';
     foreach ($updates as $file => $item) {
         $name = $plugins[$file]['Name'] ?? $file;
-        $allowed = current_user_can('update_plugin', $file) && wp_is_file_mod_allowed('plugin_update');
+        $allowed = current_user_can('update_plugins');
         echo '<tr><td><input type="checkbox" name="checked[]" value="' . esc_attr($file) . '" aria-label="Select ' . esc_attr($name) . '"' . ($allowed ? '' : ' disabled') . '></td><td><strong>' . esc_html($name) . '</strong></td><td>' . esc_html($plugins[$file]['Version'] ?? '') . '</td><td>' . esc_html($item->new_version ?? '') . '</td><td>';
         if ($allowed) { echo '<a class="button" href="' . esc_url(tnop_update_url($file)) . '">Update</a>'; }
         else { echo 'Updates are disabled on this site.'; }
         echo '</td></tr>';
     }
-    echo '</tbody></table></div><p><button type="submit" class="button button-primary">Update selected plugins</button></p></form>';
+    echo '</tbody></table></div></form>';
 }
 
 function tnop_render_catalogue(array $plugins, array $updates): void {
@@ -134,7 +134,7 @@ function tnop_render_catalogue(array $plugins, array $updates): void {
                 if ($info['last_updated'] !== '') { echo '<p class="tnop-detail">Last updated ' . esc_html($info['last_updated']) . '</p>'; }
                 echo '<p class="tnop-detail">' . esc_html(number_format_i18n($info['downloaded'])) . ' downloads · ' . esc_html(number_format_i18n($info['num_ratings'])) . ' ratings</p>';
             }
-            if (isset($updates[$file]) && current_user_can('update_plugin', $file) && wp_is_file_mod_allowed('plugin_update')) { echo '<a class="button button-primary" href="' . esc_url(tnop_update_url($file)) . '">Update</a>'; }
+            if (isset($updates[$file]) && current_user_can('update_plugins')) { echo '<a class="button button-primary" href="' . esc_url(tnop_update_url($file)) . '">Update</a>'; }
             $active = $group === 'active';
             if (current_user_can($active ? 'deactivate_plugin' : 'activate_plugin', $file)) {
                 echo '<a class="button" href="' . esc_url(tnop_activation_url($file, $active)) . '">' . esc_html((is_multisite() ? 'Network ' : '') . ($active ? 'Deactivate' : 'Activate')) . '</a>';

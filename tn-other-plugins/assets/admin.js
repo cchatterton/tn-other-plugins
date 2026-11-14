@@ -4,6 +4,12 @@
     const dialog = document.getElementById('tnop-dialog');
     if (!form || !dialog || typeof dialog.showModal !== 'function') return;
 
+    const updateForm = document.getElementById('tnop-update-form');
+    const updateSelected = document.getElementById('tnop-update-selected');
+    updateForm?.addEventListener('change', () => {
+        updateSelected.disabled = !updateForm.querySelector('[name="checked[]"]:checked:not(:disabled)');
+    });
+
     const title = document.getElementById('tnop-dialog-title');
     const message = document.getElementById('tnop-dialog-message');
     const activity = dialog.querySelector('.tnop-activity .spinner');

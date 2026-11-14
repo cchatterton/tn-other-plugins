@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5
+
+- Place Update selected plugins beside the Updates available heading and enable it when a plugin is selected.
+- Use WordPress's update_plugins capability for update actions.
+
 ## 0.1.4
 
 - Show manual update checks in a modal and refresh the list after completion.
