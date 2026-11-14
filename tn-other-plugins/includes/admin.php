@@ -70,6 +70,12 @@ function tnop_update_url(string $file): string {
     return wp_nonce_url(add_query_arg(['action' => 'upgrade-plugin', 'plugin' => $file], self_admin_url('update.php')), 'upgrade-plugin_' . $file);
 }
 
+function tnop_activation_url(string $file, bool $active): string {
+    $action = $active ? 'deactivate' : 'activate';
+    $url = add_query_arg(['action' => $action, 'plugin' => $file, 'networkwide' => is_multisite() ? 1 : 0], self_admin_url('plugins.php'));
+    return wp_nonce_url($url, $action . '-plugin_' . $file);
+}
+
 function tnop_render_updates(array $plugins, array $updates): void {
     echo '<div class="tnop-toolbar"><h2>Updates available</h2></div>';
     if (!$updates) { echo '<p>No updates available for other plugins in the latest WordPress check.</p>'; return; }
@@ -104,6 +110,10 @@ function tnop_render_catalogue(array $plugins, array $updates): void {
                 echo '<p class="tnop-detail">' . esc_html(number_format_i18n($info['downloaded'])) . ' downloads · ' . esc_html(number_format_i18n($info['num_ratings'])) . ' ratings</p>';
             }
             if (isset($updates[$file]) && current_user_can('update_plugin', $file) && wp_is_file_mod_allowed('plugin_update')) { echo '<a class="button button-primary" href="' . esc_url(tnop_update_url($file)) . '">Update</a>'; }
+            $active = $group === 'active';
+            if (current_user_can($active ? 'deactivate_plugin' : 'activate_plugin', $file)) {
+                echo '<a class="button" href="' . esc_url(tnop_activation_url($file, $active)) . '">' . esc_html((is_multisite() ? 'Network ' : '') . ($active ? 'Deactivate' : 'Activate')) . '</a>';
+            }
             echo '</article>';
         }
         echo '</div></section>';

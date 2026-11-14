@@ -20,5 +20,6 @@
 .tnop-description { flex: 1; margin: 0 0 1rem; }
 .tnop-detail { margin: 0 0 .5rem; color: #50575e; }
 .tnop-card .button { align-self: flex-start; margin-top: .8rem; }
+.tnop-card .button + .button { margin-top: .5rem; }
 .tnop-wrap a:focus-visible, .tnop-wrap button:focus-visible { outline: .15rem solid #2271b1; outline-offset: .15rem; }
 @media (max-width: 40rem) { .tnop-header { padding: 1.3rem; } .tnop-header h2 { font-size: 1.6rem; } }

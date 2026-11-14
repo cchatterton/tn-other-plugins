@@ -37,7 +37,7 @@ function tnop_update_items(): array {
 }
 
 function tnop_is_active(string $file): bool {
-    return is_plugin_active($file) || (is_multisite() && is_plugin_active_for_network($file));
+    return is_multisite() ? is_plugin_active_for_network($file) : is_plugin_active($file);
 }
 
 function tnop_wporg_slug(string $file): string {
