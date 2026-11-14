@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7
+
+- Run selected updates in a results modal using the WordPress upgrader.
+
 ## 0.1.6
 
 - Use one Update selected plugins action with a select-all checkbox, matching the Techn update list.

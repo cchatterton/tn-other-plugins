@@ -2,7 +2,7 @@
 
 A Techn WordPress plugin for reviewing installed plugins outside the Techn, AlphaSys and current Fusion catalogues.
 
-The **Plugins → Other Plugins** screen has **Updates available** and **Catalogue** tabs. An explicit check refreshes WordPress's plugin update data and public WordPress.org statistics. Individual and selected updates use the native WordPress updater. Ordinary page loads make no metadata requests.
+The **Plugins → Other Plugins** screen has **Updates available** and **Catalogue** tabs. An explicit check refreshes WordPress's plugin update data and public WordPress.org statistics. Selected updates run through the native WordPress upgrader with results in a progress dialog. WordPress may briefly enter maintenance mode while replacing active plugins. Ordinary page loads make no metadata requests.
 
 The plugin is managed by TN Update Controller. It does not supply updates for other plugins or change their existing update providers.
 

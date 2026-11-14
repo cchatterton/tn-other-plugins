@@ -22,6 +22,7 @@ function tnop_enqueue_assets(string $hook): void {
         wp_localize_script('tnop-admin', 'tnopAdmin', [
             'url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('tnop_check'),
+            'updateNonce' => wp_create_nonce('tnop_update_selected'),
         ]);
     }
 }
@@ -60,10 +61,69 @@ function tnop_check_updates_ajax(): void {
     }
     check_ajax_referer('tnop_check', 'nonce');
     $count = tnop_run_check();
-    if (defined('TNOP_AJAX_BUFFER_LEVEL')) {
-        while (ob_get_level() >= TNOP_AJAX_BUFFER_LEVEL) { ob_end_clean(); }
-    }
+    tnop_clean_ajax_output();
     wp_send_json_success(['updates' => $count]);
+}
+
+function tnop_clean_ajax_output(): void {
+    if (!defined('TNOP_AJAX_BUFFER_LEVEL')) { return; }
+    while (ob_get_level() >= TNOP_AJAX_BUFFER_LEVEL) { ob_end_clean(); }
+}
+
+function tnop_update_selected_ajax(): void {
+    if (!current_user_can('update_plugins') || (is_multisite() && !current_user_can('manage_network_plugins'))) {
+        tnop_clean_ajax_output();
+        wp_send_json_error(['message' => 'You cannot update plugins.'], 403);
+    }
+    if (!check_ajax_referer('tnop_update_selected', 'nonce', false)) {
+        tnop_clean_ajax_output();
+        wp_send_json_error(['message' => 'Your session expired. Reload this page and try again.'], 403);
+    }
+    $file = isset($_POST['plugin']) && is_string($_POST['plugin']) ? sanitize_text_field(wp_unslash($_POST['plugin'])) : '';
+    if ($file === '') {
+        tnop_clean_ajax_output();
+        wp_send_json_error(['message' => 'Select a plugin to update.'], 400);
+    }
+    $inventory = tnop_inventory();
+    $updates = tnop_update_items();
+    if (!isset($inventory[$file], $updates[$file]) || empty($updates[$file]->package)) {
+        tnop_clean_ajax_output();
+        wp_send_json_error(['message' => 'This plugin no longer has an eligible update. Check for updates again.'], 400);
+    }
+    $target = (string) ($updates[$file]->new_version ?? '');
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+    if (get_filesystem_method() !== 'direct') {
+        tnop_clean_ajax_output();
+        wp_send_json_error(['message' => 'This site needs filesystem credentials. Use the native Plugins screen to update these plugins.'], 400);
+    }
+    $upgrader = new Plugin_Upgrader(new Automatic_Upgrader_Skin());
+    $results = $upgrader->bulk_upgrade([$file], ['clear_update_cache' => false]);
+    if ($results === false) {
+        tnop_clean_ajax_output();
+        wp_send_json_error(['message' => 'WordPress could not access the plugin files. No update result was confirmed.'], 500);
+    }
+    wp_clean_plugins_cache(false);
+    require_once ABSPATH . 'wp-admin/includes/plugin.php';
+    $installed = get_plugins();
+    $result = $results[$file] ?? false;
+    $current = (string) ($installed[$file]['Version'] ?? '');
+    $success = $result && !is_wp_error($result) && $current !== '' && $target !== '' && version_compare($current, $target, '>=');
+    if ($success) {
+        $state = get_site_transient('update_plugins');
+        if (is_object($state)) {
+            if (is_array($state->response ?? null)) { unset($state->response[$file]); }
+            if (is_array($state->checked ?? null)) { $state->checked[$file] = $current; }
+            set_site_transient('update_plugins', $state);
+        }
+    }
+    $item = [
+        'name' => (string) ($inventory[$file]['Name'] ?? $file),
+        'status' => $success ? 'success' : 'failed',
+        'message' => $success ? 'Updated to ' . $current . '.' : (is_wp_error($result) ? $result->get_error_message() : 'WordPress could not verify the updated version.'),
+    ];
+    tnop_clean_ajax_output();
+    wp_send_json_success(['item' => $item]);
 }
 
 function tnop_render_admin(): void {
@@ -86,7 +146,7 @@ function tnop_render_admin(): void {
     if ($tab === 'catalogue') { tnop_render_catalogue($plugins, $updates); }
     else { tnop_render_updates($plugins, $updates); }
     echo '</main></div>';
-    echo '<dialog id="tnop-dialog" class="tnop-dialog" aria-labelledby="tnop-dialog-title" aria-describedby="tnop-dialog-message"><h2 id="tnop-dialog-title" tabindex="-1">Checking for updates</h2><div class="tnop-activity"><span class="spinner is-active" aria-hidden="true"></span><p id="tnop-dialog-message" role="status" aria-live="polite">Checking WordPress and plugin sources…</p></div><div class="tnop-dialog-actions"><button type="button" class="button button-primary" id="tnop-close" disabled>Close</button></div></dialog>';
+    echo '<dialog id="tnop-dialog" class="tnop-dialog" aria-labelledby="tnop-dialog-title" aria-describedby="tnop-dialog-message"><h2 id="tnop-dialog-title" tabindex="-1">Checking for updates</h2><div class="tnop-activity"><span class="spinner is-active" aria-hidden="true"></span><p id="tnop-dialog-message" role="status" aria-live="polite">Checking WordPress and plugin sources…</p></div><div id="tnop-progress-area" hidden><progress id="tnop-progress" max="1" value="0" aria-label="Plugins processed"></progress></div><details id="tnop-failures" hidden><summary>Failed plugins</summary><ul></ul></details><div class="tnop-dialog-actions"><button type="button" class="button button-primary" id="tnop-close" disabled>Close</button></div></dialog>';
     echo '</div>';
 }
 
@@ -118,7 +178,7 @@ function tnop_render_updates(array $plugins, array $updates): void {
     foreach ($updates as $file => $item) {
         $name = $plugins[$file]['Name'] ?? $file;
         $allowed = current_user_can('update_plugins');
-        echo '<tr><th class="check-column"><input type="checkbox" name="checked[]" value="' . esc_attr($file) . '" aria-label="Select ' . esc_attr($name) . '"' . ($allowed ? '' : ' disabled') . '></th><td><strong>' . esc_html($name) . '</strong></td><td>' . esc_html($plugins[$file]['Version'] ?? '') . '</td><td>' . esc_html($item->new_version ?? '') . '</td></tr>';
+        echo '<tr><th class="check-column"><input type="checkbox" name="checked[]" value="' . esc_attr($file) . '" data-plugin-name="' . esc_attr($name) . '" aria-label="Select ' . esc_attr($name) . '"' . ($allowed ? '' : ' disabled') . '></th><td><strong>' . esc_html($name) . '</strong></td><td>' . esc_html($plugins[$file]['Version'] ?? '') . '</td><td>' . esc_html($item->new_version ?? '') . '</td></tr>';
     }
     echo '</tbody></table></div></form>';
 }
