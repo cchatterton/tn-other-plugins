@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Correct the Techn controller API declaration used by the catalogue publisher.
+
 ## 0.1.1
 
 - Declare the Techn controller API used by the plugin.
